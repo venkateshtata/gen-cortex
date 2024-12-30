@@ -13,12 +13,33 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from rag.data import extract_sections
 from functools import partial
 import subprocess
+import psycopg
+from pgvector.psycopg import register_vector
 
 
 
 sys.path.append("..")
 warnings.filterwarnings("ignore")
 load_dotenv()
+
+connection_string = f"postgresql://postgres:postgres@localhost:5432/postgres"
+
+def create_document_table():
+    with psycopg.connect(connection_string) as conn:
+        register_vector(conn)
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS document (
+                    id SERIAL PRIMARY KEY,
+                    text TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    embedding vector(768)
+                );
+            """)
+        conn.commit()
+
+# Create the table
+create_document_table()
 
 # Add wget command to download docs
 data_dir = Path('./data')
@@ -120,3 +141,48 @@ embedded_chunks = chunks_ds.map_batches(
 
 print('Total embeddings: ', embedded_chunks.count())
 print('Embedding length: ', len(embedded_chunks.take(1)[0]['embeddings']))
+
+
+class StoreResults:
+    def __call__(self, batch):
+        with psycopg.connect(connection_string) as conn:
+            register_vector(conn)
+            with conn.cursor() as cur:
+                for text, source, embedding in zip(batch["text"], batch["source"], batch["embeddings"]):
+                    cur.execute("INSERT INTO document (text, source, embedding) VALUES (%s, %s, %s)", (text, source, embedding,),)
+        return {}
+
+# Index data
+embedded_chunks.map_batches(
+    StoreResults,
+    batch_size=128,
+    num_cpus=1,
+    compute=ActorPoolStrategy(size=1),
+ ).count()
+
+ # Embed query
+embedding_model = HuggingFaceEmbeddings(model_name=embedding_model_name)
+query = "What is the default batch size for map_batches?"
+
+embedding = np.array(embedding_model.embed_query(query))
+
+
+def print_documents():
+    with psycopg.connect(connection_string) as conn:
+        with conn.cursor() as cur:
+            # Query all records, excluding the embedding vector for cleaner output
+            cur.execute("SELECT id, text, source, embedding FROM document")
+            records = cur.fetchall()
+            
+            print(f"\nTotal records found: {len(records)}")
+            print("\n" + "="*80 + "\n")
+            
+            for record in records:
+                print(f"ID: {record[0]}")
+                print(f"Text: {record[1][:200]}...") # Print first 200 chars of text
+                print(f"Source: {record[2]}")
+                print(f"Embedding: {record[3]}")
+                print("-"*80 + "\n")
+
+# Call the function to print the documents
+print_documents()
