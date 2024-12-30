@@ -1,4 +1,3 @@
-
 import numpy as np
 import psycopg
 from pgvector.psycopg import register_vector
@@ -6,9 +5,11 @@ from rag.generate import prepare_response
 from rag.embed import get_embedding_model
 from rag.utils import get_num_tokens, trim
 from rag.config import MAX_CONTEXT_LENGTHS
-import json
 import time
 from transformers import pipeline
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import uvicorn
 
 
 
@@ -106,12 +107,38 @@ class QueryAgent:
     
 
 
+# Create FastAPI app
+app = FastAPI()
+
+# Define request model
+class QueryRequest(BaseModel):
+    query: str
+    num_chunks: int = 5
+    stream: bool = True
+
+# Initialize the agent globally
 llm = "meta-llama/Llama-2-7b-chat-hf"
-# "meta-llama/Llama-3.2-3B-Instruct"
+
 agent = QueryAgent(
     embedding_model_name="thenlper/gte-base",
     llm=llm,
     max_context_length=MAX_CONTEXT_LENGTHS[llm],
-    system_content="Answer the query using the context provided. Be succinct.")
-result = agent(query="What is the default batch size for map_batches?")
-print("\n\n", json.dumps(result, indent=2))
+    system_content="Answer the query using the context provided. Be succinct."
+)
+
+@app.post("/query")
+async def query_endpoint(request: QueryRequest):
+    try:
+        result = agent(
+            query=request.query,
+            num_chunks=request.num_chunks,
+            stream=request.stream
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Add this at the bottom of the file
+if __name__ == "__main__":
+    
+    uvicorn.run(app, host="0.0.0.0", port=8000)
