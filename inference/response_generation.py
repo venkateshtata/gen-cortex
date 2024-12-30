@@ -1,7 +1,7 @@
 from transformers import pipeline
 from rag.generate import response_stream
 
-def generate_response(llm, query, context, temperature=0.7):
+def generate_response(llm, query, context, temperature=0.1):
     """
     Generate a response using the specified LLM.
     """

@@ -63,7 +63,6 @@ def preprocess_and_store_documents():
 
 def main():
     try:
-        start_total = time()
         sys.path.append(str(Path(__file__).parent.resolve()))
 
         # Step 1: Create the database table
@@ -80,7 +79,9 @@ def main():
 
         # Step 3: Process documents and store embeddings
         print("Processing documents and storing embeddings...")
+        start = time()
         preprocess_and_store_documents()
+        print(f"Time taken to process and store embeddings: {time() - start:.2f} seconds")
 
         # Step 4: Start the FastAPI application
         print("Starting the FastAPI server...")
