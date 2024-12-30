@@ -23,7 +23,7 @@ def path_to_uri(path, scheme="https://", domain="docs.ray.io"):
 
 
 def extract_sections(record):
-    with open(record["path"], "r", encoding="utf-8") as html_file:
+    with open(record["source"], "r", encoding="utf-8") as html_file:
         soup = BeautifulSoup(html_file, "html.parser")
     sections = soup.find_all("section")
     section_list = []
@@ -31,9 +31,10 @@ def extract_sections(record):
         section_id = section.get("id")
         section_text = extract_text_from_section(section)
         if section_id:
-            uri = path_to_uri(path=record["path"])
+            uri = path_to_uri(path=record["source"])
             section_list.append({"source": f"{uri}#{section_id}", "text": section_text})
     return section_list
+
 
 
 def fetch_text(uri):

@@ -2,9 +2,9 @@ from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 from config.settings import EMBEDDING_MODEL_NAME
 
 class EmbedChunks:
-    def __init__(self):
+    def __init__(self, model_name=EMBEDDING_MODEL_NAME):
         self.embedding_model = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_NAME,
+            model_name=model_name,
             model_kwargs={"device": "cuda"},
             encode_kwargs={"device": "cuda", "batch_size": 100}
         )
