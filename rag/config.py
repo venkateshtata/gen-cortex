@@ -28,6 +28,7 @@ MAX_CONTEXT_LENGTHS = {
     "mistralai/Mistral-7B-Instruct-v0.1": 65536,
     "mistralai/Mixtral-8x7B-Instruct-v0.1": 32768,
     "mistralai/Mixtral-8x22B-Instruct-v0.1": 65536,
+    "meta-llama/Llama-3.2-3B-Instruct": 1024
 }
 
 # Pricing per 1M tokens

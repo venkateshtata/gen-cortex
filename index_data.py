@@ -16,6 +16,7 @@ from pgvector.psycopg import register_vector
 
 
 
+
 sys.path.append("..")
 warnings.filterwarnings("ignore")
 load_dotenv()
