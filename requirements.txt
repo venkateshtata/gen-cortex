@@ -31,3 +31,5 @@ isort
 pyupgrade
 
 uvicorn
+psycopg
+

@@ -16,11 +16,25 @@ from rag.search import lexical_search, semantic_search
 from rag.utils import get_client, get_num_tokens, trim
 
 
-def response_stream(chat_completion):
-    for chunk in chat_completion:
-        content = chunk.choices[0].delta.content
-        if content is not None:
-            yield content
+def response_stream(generator_output):
+    """
+    Process the generator output to extract response content.
+    This function assumes the output is a dictionary with 'generated_text'.
+    """
+    try:
+        # Check if the expected key exists
+        if "generated_text" in generator_output:
+            content = generator_output["generated_text"]
+        else:
+            content = "Unknown format in generator output"
+        
+        # Return the extracted content
+        return content
+
+    except Exception as e:
+        print(f"Error processing generator output: {e}")
+        return "Error in processing response stream."
+
 
 
 def prepare_response(chat_completion, stream):
@@ -59,18 +73,20 @@ def send_request(
     return ""
 
 
+from transformers import pipeline
+from rag.generate import response_stream
+
 def generate_response(
     llm,
     max_tokens=None,
     temperature=0.0,
-    stream=False,
     system_content="",
     assistant_content="",
     user_content="",
     max_retries=1,
     retry_interval=60,
 ):
-    """Generate response from an LLM."""
+    """Generate response using a Hugging Face model."""
     messages = [
         {"role": role, "content": content}
         for role, content in [
@@ -80,9 +96,27 @@ def generate_response(
         ]
         if content
     ]
-    return send_request(
-        llm, messages, max_tokens, temperature, stream, max_retries, retry_interval
-    )
+
+    # Concatenate message content for Hugging Face pipeline
+    input_text = " ".join([message["content"] for message in messages])
+
+    # Initialize Hugging Face pipeline
+    generator = pipeline("text-generation", model=llm)
+
+    # Generate raw response
+    try:
+        raw_response = generator(
+            input_text,
+            max_length=max_tokens or 1024,
+            temperature=temperature,
+            do_sample=False  # Greedy decoding
+        )
+        # Process the raw response
+        return response_stream(raw_response[0])  # Take the first generated result
+    except Exception as e:
+        print(f"Exception during response generation: {e}")
+        return "Error in generating response."
+
 
 
 class QueryAgent:
@@ -168,7 +202,6 @@ class QueryAgent:
             llm=self.llm,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            stream=stream,
             system_content=self.system_content,
             assistant_content=self.assistant_content,
             user_content=trim(user_content, self.context_length),
