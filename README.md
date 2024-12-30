@@ -8,14 +8,14 @@
 #### **2.1 Install Project Dependencies**
 1. Clone the repository and navigate to the project directory:
    ```bash
-   git clone <repository-url>
-   cd <project-directory>
+   git clone https://github.com/venkateshtata/gen-cortex
+   cd gen-cortex
    ```
 
 2. Create and activate a Python virtual environment:
    ```bash
    python -m venv venv
-   source venv/bin/activate   # On Windows: venv\Scripts\activate
+   source venv/bin/activate
    ```
 
 3. Install the required Python dependencies:
@@ -26,9 +26,9 @@
 ---
 
 ### **3. Start the Server**
-1. Run the FastAPI server:
+1. Run main:
    ```bash
-   uvicorn app:app --reload
+   python main.py
    ```
 
 2. The server will start at `http://localhost:8000`.
