@@ -4,11 +4,9 @@ import sys
 import warnings 
 from dotenv import load_dotenv
 from pathlib import Path
-from langchain.embeddings import OpenAIEmbeddings
 from langchain.embeddings.huggingface import HuggingFaceEmbeddings
 import numpy as np
 from ray.data import ActorPoolStrategy
-from langchain.document_loaders import ReadTheDocsLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from rag.data import extract_sections
 from functools import partial
@@ -26,6 +24,11 @@ connection_string = f"postgresql://postgres:postgres@localhost:5432/postgres"
 
 def create_document_table():
     with psycopg.connect(connection_string) as conn:
+        with conn.cursor() as cur:
+            # Add vector extension first
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+            conn.commit()
+            
         register_vector(conn)
         with conn.cursor() as cur:
             cur.execute("""
@@ -166,23 +169,4 @@ query = "What is the default batch size for map_batches?"
 
 embedding = np.array(embedding_model.embed_query(query))
 
-
-def print_documents():
-    with psycopg.connect(connection_string) as conn:
-        with conn.cursor() as cur:
-            # Query all records, excluding the embedding vector for cleaner output
-            cur.execute("SELECT id, text, source, embedding FROM document")
-            records = cur.fetchall()
-            
-            print(f"\nTotal records found: {len(records)}")
-            print("\n" + "="*80 + "\n")
-            
-            for record in records:
-                print(f"ID: {record[0]}")
-                print(f"Text: {record[1][:200]}...") # Print first 200 chars of text
-                print(f"Source: {record[2]}")
-                print(f"Embedding: {record[3]}")
-                print("-"*80 + "\n")
-
-# Call the function to print the documents
-print_documents()
+print('Question Embedding length: ', len(embedding))
