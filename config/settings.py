@@ -1,6 +1,4 @@
-import os
 from dotenv import load_dotenv
-from rag.config import MAX_CONTEXT_LENGTHS
 
 load_dotenv()
 
