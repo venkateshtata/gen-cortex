@@ -33,24 +33,24 @@ class QueryService:
     async def query_endpoint(self, request: QueryRequest):
         start_time = time.time()
         try:
-            # semantic_search_start = time.time()
-            # context = semantic_search(request.query, self.embedding_model, request.num_chunks)
-            # semantic_search_time = time.time() - semantic_search_start
+            semantic_search_start = time.time()
+            context = semantic_search(request.query, self.embedding_model, request.num_chunks)
+            semantic_search_time = time.time() - semantic_search_start
 
             response_generation_start = time.time()
             response = generate_response(
                 llm=LLM_MODEL_NAME,
                 query=request.query,
-                context=None,
+                context=context,
             )
             response_generation_time = time.time() - response_generation_start
 
             execution_time = time.time() - start_time
 
             return {
-                # "context": context,
+                "context": context,
                 "response": response,
-                # "semantic_search_time_seconds": round(semantic_search_time, 2),
+                "semantic_search_time_seconds": round(semantic_search_time, 2),
                 "response_generation_time_seconds": round(response_generation_time, 2),
                 "execution_time_seconds": round(execution_time, 2),
             }
