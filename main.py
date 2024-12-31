@@ -69,7 +69,7 @@ def main():
         print("Downloading and preparing documents...")
         download_docs(DATA_DIR)
 
-        preprocess_and_store_documents()
+        # preprocess_and_store_documents()
 
         print("Deploying the QueryService with Ray Serve...")
         serve.run(QueryService.bind())  # Correct way to deploy with Ray Serve
