@@ -32,4 +32,5 @@ pyupgrade
 
 uvicorn
 psycopg
+ray[serve]
 
