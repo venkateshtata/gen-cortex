@@ -1,4 +1,8 @@
-from langchain.embeddings.huggingface import HuggingFaceEmbeddings
+# from langchain.embeddings.huggingface import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+
+
 from config.settings import EMBEDDING_MODEL_NAME
 
 class EmbedChunks:

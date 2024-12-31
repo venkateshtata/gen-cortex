@@ -4,46 +4,58 @@ from inference.query import semantic_search
 from inference.response_generation import generate_response
 from config.settings import LLM_MODEL_NAME
 from inference.query import get_embedding_model_instance
-import sys
-from pydantic import BaseModel
-import time  # Add this import
-
+import time
+from ray import serve
+import torch
 
 app = FastAPI()
-
-
 
 class QueryRequest(BaseModel):
     query: str
     num_chunks: int = 5
-    stream: bool = False  # Default to False
+    stream: bool = False
 
+@serve.deployment(
+    autoscaling_config={
+        "min_replicas": 1,
+        "max_replicas": 10,
+        "target_ongoing_requests": 5,
+    },
+    ray_actor_options={"num_gpus": 1}
+)
+@serve.ingress(app)  # Ensure the FastAPI app is properly integrated
+class QueryService:
+    def __init__(self):
+        self.embedding_model = get_embedding_model_instance()
 
+        gpu_available = torch.cuda.is_available()
+        device_name = torch.cuda.get_device_name(0) if gpu_available else "No GPU"
+        print(f"GPU Available: {gpu_available}, Device Name: {device_name}")
 
-@app.post("/query")
-async def query_endpoint(request: QueryRequest):
-    start_time = time.time()  # Start timing
-    try:
-        # Initialize the embedding model
-        embedding_model = get_embedding_model_instance()
-        
-        # Perform semantic search
-        context = semantic_search(request.query, embedding_model, request.num_chunks)
-        
-        # Generate the response
-        response = generate_response(
-            llm=LLM_MODEL_NAME,
-            query=request.query,
-            context=context,
-        )
-        
-        execution_time = time.time() - start_time  # Calculate execution time
-        
-        return {
-            "context": context, 
-            "response": response,
-            "execution_time_seconds": round(execution_time, 2)  # Round to 2 decimal places
-        }
-    except Exception as e:
-        print(f"Error in /query endpoint: {e}", file=sys.stderr)
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    @app.post("/query")
+    async def query_endpoint(self, request: QueryRequest):
+        start_time = time.time()
+        try:
+            semantic_search_start = time.time()
+            context = semantic_search(request.query, self.embedding_model, request.num_chunks)
+            semantic_search_time = time.time() - semantic_search_start
+
+            response_generation_start = time.time()
+            response = generate_response(
+                llm=LLM_MODEL_NAME,
+                query=request.query,
+                context=context,
+            )
+            response_generation_time = time.time() - response_generation_start
+
+            execution_time = time.time() - start_time
+
+            return {
+                "context": context,
+                "response": response,
+                "semantic_search_time_seconds": round(semantic_search_time, 2),
+                "response_generation_time_seconds": round(response_generation_time, 2),
+                "execution_time_seconds": round(execution_time, 2),
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
