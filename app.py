@@ -16,12 +16,9 @@ class QueryRequest(BaseModel):
     stream: bool = False
 
 @serve.deployment(
-    autoscaling_config={
-        "min_replicas": 1,
-        "max_replicas": 10,
-        "target_ongoing_requests": 5,
-    },
-    ray_actor_options={"num_gpus": 1}
+    ray_actor_options={"num_gpus": 1,},
+    max_ongoing_requests=1,
+    num_replicas=3
 )
 @serve.ingress(app)  # Ensure the FastAPI app is properly integrated
 class QueryService:
@@ -31,7 +28,7 @@ class QueryService:
         gpu_available = torch.cuda.is_available()
         device_name = torch.cuda.get_device_name(0) if gpu_available else "No GPU"
         print(f"GPU Available: {gpu_available}, Device Name: {device_name}")
-
+    
     @app.post("/query")
     async def query_endpoint(self, request: QueryRequest):
         start_time = time.time()
